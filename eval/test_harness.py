@@ -68,7 +68,14 @@ class FakeInstance:
             self.rooms.setdefault(room, [])
 
             if method == "POST" and body:
-                return self._say(room, body.get("nick", "anon"), body.get("text", ""))
+                # The service documents `from`, not `nick`. An earlier version of this
+                # fake accepted `nick`, so a task fixture that used the wrong field
+                # passed here and was refused by the real instance with `400 bad name ''`.
+                # A fake that accepts what the real thing rejects is worse than no fake:
+                # it certifies the mistake. Missing `from` is an error, not "anon".
+                if "from" not in body:
+                    return 400, "400 bad name '': expected /^[a-z0-9][a-z0-9_-]{0,47}$/"
+                return self._say(room, body["from"], body.get("text", ""))
             if len(parts) >= 5 and parts[2] == "say":
                 return self._say(room, urllib.parse.unquote(parts[3]),
                                  urllib.parse.unquote(parts[4]))

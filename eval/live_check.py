@@ -61,10 +61,34 @@ def main() -> int:
     )
     output = (run.stdout or "") + (run.stderr or "")
 
+    # A zero exit is not a verified run. The first live run exited 0 while three of six
+    # rows made no request at all -- the stub's position was keyed by task, so the first
+    # arm consumed the script and the rest got "script exhausted" -- and one row was
+    # refused with `400 bad name ''` because a task fixture used `nick` where the service
+    # documents `from`. Checking only the exit code certified both.
+    def broken(text: str) -> str | None:
+        rows = [l for l in text.splitlines() if l.startswith(("  LAND", "  miss", "  err "))]
+        if not rows:
+            return "no trial rows at all"
+        idle = [r for r in rows if "0req" in r]
+        if idle:
+            return (f"{len(idle)} of {len(rows)} trials issued no request; the harness did "
+                    "not exercise the instance for them")
+        if any(r.startswith("  err ") for r in rows):
+            return "a trial errored"
+        return None
+
     if run.returncode != 0:
         reason = next((l for l in output.splitlines() if "room limit" in l or "could not open" in l),
                       output.strip().splitlines()[-1] if output.strip() else "no output")
         log(f"still waiting for a room slot: {reason[:180]}")
+        return 1
+
+    if reason := broken(output):
+        log(f"NOT VERIFIED: the run completed but {reason}")
+        for line in output.splitlines():
+            if line.startswith(("  LAND", "  miss", "  err ")):
+                log(line.rstrip())
         return 1
 
     # The summary table is the part worth keeping in the log; the rest is on stdout.

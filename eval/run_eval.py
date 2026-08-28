@@ -155,11 +155,16 @@ class StubRunner:
         self._step: dict[str, int] = {}
 
     def propose(self, system: str, transcript: list[dict], task: dict, room: str) -> str:
+        # Keyed by task AND by how far this transcript has got, not by task alone. Keying
+        # by task made the first arm consume the whole script and every later arm receive
+        # "script exhausted" -- which showed up live as three of six rows making zero
+        # requests. One StubRunner is shared across arms by design, so its position
+        # cannot be global to the task.
         script = task.get("stub_script") or []
-        i = self._step.get(task["id"], 0)
-        self._step[task["id"]] = i + 1
+        i = len(transcript)
         if i >= len(script):
             return json.dumps({"reason": "script exhausted", "done": True})
+        self._step[task["id"]] = i + 1
         step = json.loads(json.dumps(script[i]).replace("{room}", room))
         return json.dumps(step)
 
