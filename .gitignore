@@ -2,3 +2,5 @@ build/
 __pycache__/
 eval/.room
 eval/results/
+eval/.live-verified
+eval/live-check.log
