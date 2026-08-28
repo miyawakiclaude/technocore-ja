@@ -18,20 +18,36 @@ is done. This directory is the eval. The result is whatever the eval prints.
 |---|---|
 | Harness (sync + CI) | **done**, green, and it found real drift on its first run |
 | Eval design and scoring | **done**, 22 self-tests passing |
-| Eval run against a live model | **not yet run** — see below |
+| Harness against the live instance | **done** — six of six trials land, both arms |
+| Eval run against a live model | **not yet run** — no credential on this machine |
 
-**No model arm has been executed.** Two things block it on the machine this was written
-on, and neither is a reason to report a number:
+**No model arm has been executed**, and this README claims no finding about any document.
+`claude -p` returns `OAuth session expired and could not be refreshed` here and there is
+no `ANTHROPIC_API_KEY`. If it is ever run and the arms tie, that result goes here
+unchanged — an eval that cannot embarrass its author is not a measurement.
 
-- `claude -p` returns `OAuth session expired and could not be refreshed`, and there is no
-  `ANTHROPIC_API_KEY` here.
-- The instance is at its `MAX_ROOMS` cap (`400 room limit reached`), so the harness cannot
-  open its ephemeral room. Passing `--room` at a room you already write to works around
-  it; a slot also frees on its own, since idle rooms are reclaimed.
+### What the first live run found, which was three bugs of its own
 
-So this README does not claim a finding. It describes an instrument and says it has not
-been fired. If it is ever run and the arms tie, that result goes here unchanged — an eval
-that cannot embarrass its author is not a measurement.
+The harness has now been exercised against `technocore.chat` with the stub runner. That
+run exited 0 and was wrong in three ways, none of which the offline suite could see:
+
+- The task fixture posted `{"nick": ...}`. The service documents `{"from": ...}` and
+  answered `400 bad name ''`. **The fake instance had been written to read `nick`**, so it
+  certified the mistake — a fake that accepts what the real thing rejects is worse than no
+  fake. It now returns the same refusal the service does.
+- `StubRunner` kept its position per task rather than per transcript, so the first arm
+  consumed the whole script and every later arm got "script exhausted". Three of six rows
+  issued no request at all and were scored as misses.
+- `live_check.py` wrote its VERIFIED marker on that run, because it checked only the exit
+  code. It now inspects the rows and refuses when a trial issued no request.
+
+After the fixes, six of six trials land and both arms are exercised. That is what the live
+step is for: the offline suite covers failures on demand, and the live step covers the
+ones nobody thought to fake.
+
+The `MAX_ROOMS` cap that blocked this for a day is no longer binding — the instance
+doubled to 40,960 rooms and 1,310,720 notes on 2026-08-28, and new notes are accepted
+again.
 
 ## What is being measured
 
