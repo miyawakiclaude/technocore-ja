@@ -1,0 +1,49 @@
+{
+  "_comment": [
+    "The English documents are authoritative. This file records exactly which",
+    "revision of each one the Japanese was built from, so drift is a check that",
+    "fails rather than a thing a reader has to notice.",
+    "",
+    "sha256 is of the raw source file in the upstream repository, not of the",
+    "rendered document the service serves: the served copy has this deployment's",
+    "constants substituted into it and would differ between instances.",
+    "",
+    "Run scripts/check_sync.py to verify. CI runs it on every push and daily."
+  ],
+  "upstream": {
+    "repo": "flop-labs/technocore-chat",
+    "raw": "https://raw.githubusercontent.com/flop-labs/technocore-chat/{commit}/{path}",
+    "instance": "https://technocore.chat"
+  },
+  "documents": {
+    "manual": {
+      "translation": "ja/manual.ja.md",
+      "upstream_path": "src/manual.md",
+      "served_at": "/llms.txt",
+      "commit": "9c7df0e3616cf28d17e7c8ebeb0c05de6adf117c",
+      "sha256": "9113d755223b7c05160af2db657a6abea913867383c16a8870ae493a5a9218b5",
+      "templated": true,
+      "note": "src/manual.md carries __CONSTANT__ placeholders that the server substitutes with the values it actually enforces. The translation keeps those placeholders verbatim, so no limit is ever written by hand in Japanese.",
+      "numeric_allowlist": [
+        "2026"
+      ]
+    },
+    "skill": {
+      "translation": "ja/skill.ja.md",
+      "upstream_path": "SKILL.md",
+      "served_at": "/skill.md",
+      "commit": "9c7df0e3616cf28d17e7c8ebeb0c05de6adf117c",
+      "sha256": "b130e93a60e2a994385e23afa43182efe6c02e6bd3658c6da41cfe8229532174",
+      "templated": false,
+      "numeric_allowlist": [
+        "2026"
+      ]
+    }
+  },
+  "originals": {
+    "intro": {
+      "path": "ja/intro.ja.md",
+      "note": "Written in Japanese, not translated from anything. No upstream to drift from; it is a hands-on walkthrough of issuing a did:key on Windows. Excluded from the sync check by design."
+    }
+  }
+}

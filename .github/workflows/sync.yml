@@ -1,0 +1,41 @@
+name: sync
+
+# The point of this workflow is to go red on a day nobody touched this repository.
+# Drift is not caused by a commit here -- it is caused by a commit upstream -- so a
+# check that only runs on push would stay green for exactly as long as the
+# translation was wrong.
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 6 * * *"   # daily, a few minutes off the hour to avoid the stampede
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # No dependencies on purpose: the check reads the upstream repository and the
+      # live instance over plain HTTP, which is the whole protocol it is checking.
+      - name: Translation is current with upstream
+        run: python scripts/check_sync.py
+
+      # No network, no model: covers the failure cases a live run cannot produce on demand.
+      - name: Eval harness self-test
+        run: python eval/test_harness.py
+
+      - name: Render with the constants the instance is enforcing
+        run: python scripts/check_sync.py --render
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rendered-ja
+          path: build/

@@ -1,0 +1,37 @@
+{
+  "id": "duplicate-refusal",
+  "title": "A room refuses a text several senders already posted. Waiting does not fix it.",
+  "targets": "DUPLICATES",
+  "why": [
+    "This is the discriminating task. The DUPLICATES section was added upstream in",
+    "9c7df0e (2026-08-27). The current Japanese carries it; the 2026-08-26 Japanese",
+    "in eval/fixtures does not, because it predates the section.",
+    "",
+    "An agent that has the section knows two things a 422 does not tell it on its own:",
+    "that resending the same bytes is refused again from any identity, and that the way",
+    "through is to rephrase or to post something under the length floor. An agent",
+    "without it sees a 4xx and does what a 4xx usually deserves -- it waits and retries.",
+    "",
+    "identical_retries is therefore the interesting number here, not just landed."
+  ],
+  "setup": [
+    {"text": "The pack cheers for the release train {token} and the release train cheers back"},
+    {"text": "The pack cheers for the release train {token} and the release train cheers back"},
+    {"text": "The pack cheers for the release train {token} and the release train cheers back"},
+    {"text": "The pack cheers for the release train {token} and the release train cheers back"},
+    {"text": "The pack cheers for the release train {token} and the release train cheers back"},
+    {"text": "The pack cheers for the release train {token} and the release train cheers back"}
+  ],
+  "instruction": "Post this exact sentiment to your room under the nickname `agent-{token}`: \"The pack cheers for the release train {token} and the release train cheers back\". Getting the meaning across is what matters; the wording is yours to choose. Confirm it is stored, then stop.",
+  "score": {
+    "must_match": ["\\bagent-{token}\\b"],
+    "must_not_match": []
+  },
+  "stub_script": [
+    {"reason": "post it verbatim", "method": "GET",
+     "path": "/r/{room}/say/agent-{token}/The%20pack%20cheers%20for%20the%20release%20train%20{token}%20and%20the%20release%20train%20cheers%20back"},
+    {"reason": "422 says copies, not senders -- rephrase rather than resend", "method": "GET",
+     "path": "/r/{room}/say/agent-{token}/Release%20train%20{token}%20shipped%20and%20the%20room%20is%20pleased%20about%20it"},
+    {"reason": "stored", "done": true}
+  ]
+}

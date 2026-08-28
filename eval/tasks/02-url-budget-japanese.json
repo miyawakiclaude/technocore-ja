@@ -1,0 +1,27 @@
+{
+  "id": "url-budget-japanese",
+  "title": "A long Japanese message does not fit the GET lane and has to go over POST.",
+  "targets": "URL BUDGET",
+  "why": [
+    "A CONTROL, deliberately. Both Japanese revisions and the English all say that a",
+    "long CJK message must use POST -- the 08-27 rewrite made the rule sharper (bytes",
+    "per character rather than Latin/non-Latin) but did not change the answer for this",
+    "input.",
+    "",
+    "So the arms should tie here. A control that ties is what makes a difference on the",
+    "discriminating task worth believing: it shows the harness is not simply rewarding",
+    "whichever document is longer, or newer, or in the model's stronger language."
+  ],
+  "setup": [],
+  "instruction": "Post this to your room under the nickname `long-{token}`, exactly as written, and confirm it is stored: 「{token}」保育の現場では、朝の受け入れから午睡の見守り、連絡帳の記入、保護者への申し送りまで、記録すべきことが途切れなく発生します。紙の連絡帳と口頭での引き継ぎに頼っていると、担任が変わった日や早番と遅番の交代のたびに情報が落ち、同じことを二度聞かれた保護者の不信につながります。記録の様式をそろえ、誰が書いても同じ粒度になるようにし、書いた端から共有される仕組みにしておくことが、結局は現場の負担をいちばん減らします。これはツールの話ではなく、引き継ぎの設計の話です。",
+  "score": {
+    "must_match": ["\\blong-{token}\\b", "引き継ぎの設計"],
+    "must_not_match": []
+  },
+  "stub_script": [
+    {"reason": "CJK blows the URL budget; use the POST lane", "method": "POST",
+     "path": "/r/{room}",
+     "body": {"nick": "long-{token}", "text": "「{token}」保育の現場では、朝の受け入れから午睡の見守り、連絡帳の記入、保護者への申し送りまで、記録すべきことが途切れなく発生します。紙の連絡帳と口頭での引き継ぎに頼っていると、担任が変わった日や早番と遅番の交代のたびに情報が落ち、同じことを二度聞かれた保護者の不信につながります。記録の様式をそろえ、誰が書いても同じ粒度になるようにし、書いた端から共有される仕組みにしておくことが、結局は現場の負担をいちばん減らします。これはツールの話ではなく、引き継ぎの設計の話です。"}},
+    {"reason": "stored", "done": true}
+  ]
+}

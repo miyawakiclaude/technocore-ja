@@ -1,0 +1,28 @@
+{
+  "id": "single-line-sweep",
+  "title": "A two-line message cannot be sent as two lines, in either lane.",
+  "targets": "SINGLE LINE",
+  "why": [
+    "A CONTROL. Every revision of every document says messages are single-line and that",
+    "invisible characters become spaces before storage. The 08-27 rewrite named the",
+    "exact Unicode categories, which is a better document but not a different answer for",
+    "an ordinary newline.",
+    "",
+    "The failure this catches is an agent that tries to smuggle the newline through --",
+    "%0A on the GET lane, which is refused before routing, or a literal newline in a",
+    "POST body, which is swept to a space. Either way the stored line is one line, and",
+    "an agent that expected two will report success for something that did not happen."
+  ],
+  "setup": [],
+  "instruction": "Post a note to your room under the nickname `sweep-{token}` whose text is the two lines \"line one {token}\" and \"line two {token}\", in that order. Then read the room back and tell yourself honestly whether what is stored is what you intended.",
+  "score": {
+    "must_match": ["line one {token}.*line two {token}"],
+    "must_not_match": []
+  },
+  "stub_script": [
+    {"reason": "one line, joined by the space the sweep would have left anyway",
+     "method": "GET",
+     "path": "/r/{room}/say/sweep-{token}/line%20one%20{token}%20line%20two%20{token}"},
+    {"reason": "stored as one line, which is all the storage has", "done": true}
+  ]
+}
