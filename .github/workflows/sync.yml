@@ -12,6 +12,13 @@ on:
     - cron: "17 6 * * *"   # daily, a few minutes off the hour to avoid the stampede
   workflow_dispatch:
 
+# Least privilege, stated rather than inherited. This job reads the upstream repository
+# and the live instance over plain HTTP and uploads an artifact; it never writes to this
+# repository, so it should not be able to. lineageauth's workflows declared this from the
+# start and this one, written in an afternoon, did not.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -26,6 +33,12 @@ jobs:
       # live instance over plain HTTP, which is the whole protocol it is checking.
       - name: Translation is current with upstream
         run: python scripts/check_sync.py
+
+      # No network: the deployment's route table is a fixture, so this covers the cases a
+      # live run cannot produce on demand -- notably a translation of an upstream revision
+      # the deployment has not shipped, which every other check here passes.
+      - name: check_sync self-test
+        run: python scripts/test_check_sync.py
 
       # No network, no model: covers the failure cases a live run cannot produce on demand.
       - name: Eval harness self-test

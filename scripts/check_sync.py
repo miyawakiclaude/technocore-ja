@@ -152,7 +152,8 @@ def substitutions(template: str, served: str) -> dict[str, str]:
 
 # ---------------------------------------------------------------------- the checks
 
-def check_source_moved(cfg: dict, name: str, doc: dict, failures: list[str]) -> str:
+def check_source_moved(cfg: dict, name: str, doc: dict, failures: list[str],
+                       warnings: list[str] | None = None) -> str:
     """Returns the English source as it was pinned. Fails if upstream has moved on."""
     path = doc["upstream_path"]
     pinned = fetch(raw_url(cfg, doc["commit"], path))
@@ -171,11 +172,88 @@ def check_source_moved(cfg: dict, name: str, doc: dict, failures: list[str]) -> 
             pinned.splitlines(), head.splitlines(),
             f"{path}@{doc['commit'][:8]} (translated from)",
             f"{path}@main (current)", n=1, lineterm=""))[:80])
-        failures.append(
+        # A warning, deliberately. Upstream main runs ahead of what is deployed, so
+        # syncing the moment this fires is how a translation ends up documenting a route
+        # that 404s -- which is what happened, and what PHANTOM ROUTE now fails on.
+        # Sync when the deployment catches up, not when main moves.
+        (warnings if warnings is not None else failures).append(
             f"[{name}] SOURCE MOVED: the English changed since this translation was "
-            f"built. The Japanese now describes an older service.\n{diff}"
+            f"built. The Japanese describes the deployed service; main is ahead of it. "
+            f"Sync when the deployment ships this, and let PHANTOM ROUTE decide.\n{diff}"
         )
     return pinned
+
+
+def deployed_routes(instance: str) -> list[list[str]]:
+    """The route table the deployment actually serves, split into path segments.
+
+    Read out of /openapi.json rather than by requesting the routes. On this service a
+    GET performs writes -- /kv/<ns>/<key>/set/<value> is a write over GET -- so a checker
+    that probed each documented path to see whether it 404s would write to the service it
+    is meant to be checking. The published schema answers the same question and touches
+    nothing. A `{name}` segment is stored as None, meaning "anything".
+    """
+    paths = json.loads(fetch(instance + "/openapi.json"))["paths"]
+    routes = []
+    for route in paths:
+        routes.append([None if re.fullmatch(r"\{\w+\}", seg) else seg
+                       for seg in route.strip("/").split("/")])
+    return routes
+
+
+def _route_is_served(path: str, served: list[list[str]], partial: bool = False) -> bool:
+    """Structural match, not string equality.
+
+    The documents name routes three ways -- with the schema's own placeholder
+    (/kv/<ns>/<key>), with a differently-named one (<claim_nonce> for {nonce}), and with a
+    worked concrete example (/r/lobby/say/yourname/hi%20there). All three are the same
+    route, so only the literal segments are compared, and a segment the schema declares a
+    parameter matches whatever is written in its place. Comparing strings instead reported
+    every route in the manual as missing, which is the failure mode that makes a checker
+    get switched off.
+    """
+    got = path.strip("/").split("/") if path.strip("/") else [""]
+    for route in served:
+        # `partial` is a route the prose wrapped across a line, so its tail is unknown.
+        # Only the segments actually written can be asserted; claiming the rest is
+        # missing would report a real route as phantom.
+        if len(route) < len(got) if partial else len(route) != len(got):
+            continue
+        if all(want is None or want == have for want, have in zip(route, got)):
+            return True
+    return False
+
+
+def check_phantom_routes(name: str, japanese: str, served: list[list[str]],
+                         failures: list[str]) -> None:
+    """No route named in the Japanese may be absent from the deployment.
+
+    This is the check that catches syncing a translation to a source that is ahead of
+    production. Upstream main documented GET /r/<room>/export while the deployment
+    answered 404 to it, and every other check in this file went green on a translation of
+    it: the Japanese faithfully described a service nobody could call. A reader sent into
+    a 404 by a translated manual is worse off than one reading a manual a few days behind,
+    which is why this fails and SOURCE MOVED only warns.
+    """
+    named: dict[str, bool] = {}
+    for m in re.finditer(r"(?:GET|POST)\s+(/[^\s`,;)]*)", japanese):
+        path = m.group(1).split("?", 1)[0].split("#", 1)[0].rstrip(".,;)")
+        # An unclosed placeholder means the prose wrapped mid-route: `<the` continues on
+        # the next line. Keep the segments that were written and mark the tail unknown.
+        partial = path.count("<") != path.count(">")
+        if partial:
+            path = path[:path.rfind("/")] or path
+        if path:
+            named[path] = named.get(path, True) and partial
+    phantom = sorted(p for p, part in named.items()
+                     if not _route_is_served(p, served, part))
+    if phantom:
+        failures.append(
+            f"[{name}] PHANTOM ROUTE: {', '.join(phantom)} "
+            f"appears in the Japanese but is not in the deployment's route table at "
+            f"/openapi.json, so the translation would send a reader to a 404. If upstream "
+            f"has the route and production does not, keep the Japanese pinned to the "
+            f"deployed revision and stage the new text until it ships.")
 
 
 def check_sections(name: str, english: str, japanese: str, failures: list[str]) -> None:
@@ -280,7 +358,10 @@ def main() -> int:
     cfg = json.load(io.open(SOURCES, encoding="utf-8"))
     instance = cfg["upstream"]["instance"]
     failures: list[str] = []
+    warnings: list[str] = []
     rendered: dict[str, str] = {}
+    # Fetched once: the route table is the same for every document.
+    served_routes = deployed_routes(instance) if not args.update else []
 
     for name, doc in cfg["documents"].items():
         if args.update:
@@ -292,9 +373,10 @@ def main() -> int:
             print(f"pinned {name} -> {head_sha[:8]}")
             continue
 
-        english = check_source_moved(cfg, name, doc, failures)
+        english = check_source_moved(cfg, name, doc, failures, warnings)
         japanese = read(doc["translation"])
 
+        check_phantom_routes(name, japanese, served_routes, failures)
         check_sections(name, english, japanese, failures)
         check_code_spans(name, english, japanese, failures)
         check_no_stray_numbers(name, english, japanese,
@@ -333,6 +415,16 @@ def main() -> int:
             io.open(dest, "w", encoding="utf-8", newline="\n").write(text)
             print("rendered", dest, len(text), "chars")
 
+    # Printed whether or not anything failed. A warning that is collected and never shown
+    # is worse than one that blocks: the drift is then invisible rather than merely
+    # tolerated, and this printer was missing once already.
+    for w in warnings:
+        print("\n" + "=" * 72)
+        print("WARNING -- does not fail the build. Do not sync on this alone; the "
+              "deployment lags main, and PHANTOM ROUTE is what decides.")
+        print("=" * 72)
+        print("\n" + w)
+
     if failures:
         print("\n" + "=" * 72)
         print(f"{len(failures)} check(s) failed. The Japanese is not safe to publish as current.")
@@ -342,7 +434,9 @@ def main() -> int:
         return 1
 
     print("\nAll checks passed: the Japanese matches the English it is pinned to, "
-          "carries every section, and states no constant by hand.")
+          "names no route the deployment does not serve, carries every section, "
+          "and states no constant by hand."
+          + (f" {len(warnings)} warning(s) above." if warnings else ""))
     return 0
 
 
