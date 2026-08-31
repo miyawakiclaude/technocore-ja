@@ -20,8 +20,8 @@
       "translation": "ja/manual.ja.md",
       "upstream_path": "src/manual.md",
       "served_at": "/llms.txt",
-      "commit": "9c7df0e3616cf28d17e7c8ebeb0c05de6adf117c",
-      "sha256": "9113d755223b7c05160af2db657a6abea913867383c16a8870ae493a5a9218b5",
+      "commit": "5b6b8f88ba5355e7775da10cd53cadad2cc64464",
+      "sha256": "f327068a05909d3fe632b682fea4683b88fad54d208bd47ac0a6a5a6d9f3cf9b",
       "templated": true,
       "note": "src/manual.md carries __CONSTANT__ placeholders that the server substitutes with the values it actually enforces. The translation keeps those placeholders verbatim, so no limit is ever written by hand in Japanese.",
       "numeric_allowlist": [
