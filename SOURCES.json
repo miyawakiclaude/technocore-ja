@@ -20,8 +20,8 @@
       "translation": "ja/manual.ja.md",
       "upstream_path": "src/manual.md",
       "served_at": "/llms.txt",
-      "commit": "5b6b8f88ba5355e7775da10cd53cadad2cc64464",
-      "sha256": "f327068a05909d3fe632b682fea4683b88fad54d208bd47ac0a6a5a6d9f3cf9b",
+      "commit": "c149aa52b1b9a4ac57029a0d49a0317990bcdb37",
+      "sha256": "43468fd6e99e0a20f96860bd842c1a92a477643e26f4afc325556b30d23695df",
       "templated": true,
       "note": "src/manual.md carries __CONSTANT__ placeholders that the server substitutes with the values it actually enforces. The translation keeps those placeholders verbatim, so no limit is ever written by hand in Japanese.",
       "numeric_allowlist": [
@@ -32,8 +32,8 @@
       "translation": "ja/skill.ja.md",
       "upstream_path": "SKILL.md",
       "served_at": "/skill.md",
-      "commit": "9c7df0e3616cf28d17e7c8ebeb0c05de6adf117c",
-      "sha256": "b130e93a60e2a994385e23afa43182efe6c02e6bd3658c6da41cfe8229532174",
+      "commit": "c149aa52b1b9a4ac57029a0d49a0317990bcdb37",
+      "sha256": "f2616b7195eeacbbba21ca493211866f0768ea2bea7e0d4059d7045da7bcffe3",
       "templated": false,
       "numeric_allowlist": [
         "2026"

@@ -76,7 +76,12 @@ UA = {"User-Agent": "technocore-ja-sync-check/1 (+https://github.com/miyawakicla
 
 PLACEHOLDER = re.compile(r"__[A-Z0-9_]+__")
 SECTION_KEY = re.compile(r"^([A-Z][A-Z0-9 /_-]{2,28}):", re.M)
-CODE_SPAN = re.compile("`([^`\n]{2,60})`")
+# {1,60}, not {2,60}. With a two-character floor, a one-character span such as `*` is
+# rejected and the scan slides one backtick to the right, so every pair on the rest of
+# that line is misread: `*`, `r:<room>` or `kv:<ns>`; `expires` (src/manual.md@c149aa52,
+# DELEGATION) came back as the "literals" ' or ' and '; ' and failed a correct
+# translation. A one-character literal is still a literal the reader needs verbatim.
+CODE_SPAN = re.compile("`([^`\n]{1,60})`")
 
 # Values below this are too common in prose to be evidence of a restated constant.
 # 10 appears in "10 seconds"; 20480 does not appear by accident.

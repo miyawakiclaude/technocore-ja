@@ -118,6 +118,25 @@ check("SOURCE REWRITTEN stays a failure",
 # A collected warning that is never printed hides the drift instead of tolerating it.
 check("warnings are actually printed", "for w in warnings:" in src, True)
 
+print("\ncode spans -- a one-character literal must not shift the pairing for the line")
+# src/manual.md@c149aa52, DELEGATION: `*`, `r:<room>` or `kv:<ns>`; `expires`. With a
+# two-character floor the scan rejected `*`, slid one backtick, and reported ' or ' and
+# '; ' as literals the Japanese had lost. The Japanese had lost nothing.
+line = "Scope is `*`, `r:<room>` or `kv:<ns>`; `expires` is unix seconds."
+check("the four real spans are found, and no phantom ones",
+      check_sync.CODE_SPAN.findall(line), ["*", "r:<room>", "kv:<ns>", "expires"])
+out = []
+check_sync.check_code_spans("manual", line,
+                            "scope は `*`、`r:<room>`、`kv:<ns>` のいずれか。`expires` は unix 秒。", out)
+check("a faithful translation with different punctuation passes", out, [])
+out = []
+check_sync.check_code_spans("manual", line, "scope は *、r:<room>、kv:<ns> のいずれか。", out)
+check("but dropping the literals still fails", len(out), 1)
+# Presence is a substring test, so `*`, `r:<room>` and `kv:<ns>` written without
+# backticks still count as present; only `expires` is genuinely gone from that line.
+check("and the report names exactly what was dropped",
+      bool(out) and "'expires'" in out[0] and "'*'" not in out[0], True)
+
 print()
 if failures:
     print("=" * 72)
